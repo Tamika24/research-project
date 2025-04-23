@@ -7,7 +7,7 @@ library(tidyr)
 raw <- read_excel(
   "Peregrine ringing data sightings_1989-2024_13042025.xlsx",
   sheet = "Re-sightings - annual",
-  skip = 3
+  skip = 3 # skip metadata rows
 )
 
 # 3. Tidy up: rename the ring ID and the year‐sighted columns,
@@ -23,7 +23,7 @@ dat <- raw %>%
   distinct() %>%              # one (ring, year) per bird-year
   mutate(obs = 1L)            # 1 = seen
 
-# 4. Build a full table of (ring × all years in your study) and join
+# 4. Build a full table of (ring × all years in your study) and join...so even if a bird wasn't seen in a certain year that (ring, year) pair still exists...to be filled with 0s later
 years <- 1990:2019
 
 all_combos <- expand.grid(
@@ -33,7 +33,7 @@ all_combos <- expand.grid(
 
 full <- all_combos %>%
   left_join(dat, by = c("ring", "year_seen")) %>%
-  mutate(obs = replace_na(obs, 0L))
+  mutate(obs = replace_na(obs, 0L)) # If a bird was not seen in a year, obs is set to 0 using replace_na.
 
 enc_hist <- full %>%
   arrange(ring, year_seen) %>%
@@ -68,3 +68,4 @@ write.table(
   col.names = FALSE,
   sep = " "
 )
+
