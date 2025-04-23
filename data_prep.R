@@ -53,3 +53,18 @@ cap_hist <- enc_hist %>%
   mutate(
     caphist_str = apply(select(., starts_with("yr")), 1, paste0, collapse = "")
   )
+
+# Optional: add frequency column (if each is unique, all freq = 1)
+cap_hist_inp <- cap_hist %>%
+  select(caphist_str) %>%
+  mutate(freq = 1)
+
+# Write to .inp file (no header, space-separated)
+write.table(
+  cap_hist_inp,
+  file = "peregrine_data.inp",
+  quote = FALSE,
+  row.names = FALSE,
+  col.names = FALSE,
+  sep = " "
+)
