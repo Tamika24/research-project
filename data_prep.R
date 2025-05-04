@@ -24,7 +24,7 @@ dat <- raw %>%
   mutate(obs = 1L)            # 1 = seen
 
 # 4. Build a full table of (ring × all years in your study) and join...so even if a bird wasn't seen in a certain year that (ring, year) pair still exists...to be filled with 0s later
-years <- 1990:2019
+years <- 1997:2019
 
 all_combos <- expand.grid(
   ring      = unique(dat$ring),
@@ -88,7 +88,7 @@ dat <- raw %>%
     date_seen = as.Date(date_seen),
     # if month ≥ 8 (Aug–Dec) → same calendar year; else (Jan–Jul) → previous year
     cap_year = if_else(
-      month(date_seen) >= 8,
+      month(date_seen) >= 9,
       year(date_seen),
       year(date_seen) - 1L
     )
@@ -96,11 +96,11 @@ dat <- raw %>%
   select(ring, cap_year) %>%
   distinct() %>%
   mutate(obs = 1L) %>%
-  # keep only your 30 seasons 1990–2019
-  filter(cap_year >= 1990, cap_year <= 2019)
+  # keep only your 23 seasons 1997–2019
+  filter(cap_year >= 1997, cap_year <= 2019)
 
-# 3. Build every ring × Aug–Jul season from 1990 to 2019
-years <- 1990:2019
+# 3. Build every ring × Aug–Jul season from 1997 to 2019
+years <- 1997:2019
 
 all_combos <- expand.grid(
   ring     = unique(dat$ring),
