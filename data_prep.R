@@ -3,7 +3,7 @@ library(lubridate)
 library(readxl)
 library(dplyr)
 library(tidyr)
-
+#####------------------------
 raw <- read_excel(
   "Peregrine ringing data sightings_1989-2024_13042025.xlsx",
   sheet = "Re-sightings - annual",
@@ -69,3 +69,73 @@ write.table(
   sep = " "
 )
 
+
+#####new year code-----------
+# 1. Read the raw data
+raw <- read_excel(
+  "Peregrine ringing data sightings_1989-2024_13042025.xlsx",
+  sheet = "Re-sightings - annual",
+  skip  = 3
+)
+
+# 2. Compute an "Aug–Jul capture‐year" and flag sightings
+dat <- raw %>%
+  rename(
+    ring      = `ring number`,
+    date_seen = `date sighted on territory`
+  ) %>%
+  mutate(
+    date_seen = as.Date(date_seen),
+    # if month ≥ 8 (Aug–Dec) → same calendar year; else (Jan–Jul) → previous year
+    cap_year = if_else(
+      month(date_seen) >= 8,
+      year(date_seen),
+      year(date_seen) - 1L
+    )
+  ) %>%
+  select(ring, cap_year) %>%
+  distinct() %>%
+  mutate(obs = 1L) %>%
+  # keep only your 30 seasons 1990–2019
+  filter(cap_year >= 1990, cap_year <= 2019)
+
+# 3. Build every ring × Aug–Jul season from 1990 to 2019
+years <- 1990:2019
+
+all_combos <- expand.grid(
+  ring     = unique(dat$ring),
+  cap_year = years
+)
+
+full <- all_combos %>%
+  left_join(dat, by = c("ring","cap_year")) %>%
+  mutate(obs = replace_na(obs, 0L))
+
+# 4. Pivot into your 0/1 encounter‐history (yr1990 … yr2019)
+enc_hist <- full %>%
+  arrange(ring, cap_year) %>%
+  pivot_wider(
+    names_from   = cap_year,
+    values_from  = obs,
+    names_prefix = "yr",
+    values_fill  = 0L
+  )
+
+# 5. (Optional) Get a matrix or .inp file exactly as before:
+ch_matrix <- as.matrix(enc_hist[,-1])
+rownames(ch_matrix) <- enc_hist$ring
+
+# if you need the .inp format:
+caphist_inp <- enc_hist %>%
+  mutate(caphist = apply(select(., starts_with("yr")), 1, paste0, collapse = "")) %>%
+  select(caphist) %>%
+  mutate(freq = 1)
+
+write.table(
+  caphist_inp,
+  "peregrine_data_newyear.inp",
+  quote     = FALSE,
+  row.names = FALSE,
+  col.names = FALSE,
+  sep       = " "
+)
