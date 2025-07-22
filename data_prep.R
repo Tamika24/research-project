@@ -139,7 +139,11 @@ write.table(
   col.names = FALSE,
   sep       = " "
 )
+# build each line with a trailing semicolon
+lines <- with(caphist_inp, paste0(caphist, " ", freq, " ;"))
 
+# write out exactly those lines
+writeLines(lines, "peregrine_data_newyear.inp")
 #checking if any encounter histories are just zeros
 caphist_inp %>%
   mutate(
@@ -260,7 +264,11 @@ write.table(
   col.names = FALSE,
   sep       = " "
 )
+#Build each line with a trailing semicolon
+lines <- with(caphist_inp, paste0(caphist, " ", freq, " ;"))
 
+#Write exactly those lines to your .inp
+writeLines(lines, "peregrine_merged_.inp")
 #checking if there's any all zero entries
 #Find which rows sum to zero
 zero_rows <- which(rowSums(ch_matrix) == 0)
@@ -274,3 +282,85 @@ if (any_zero_histories) {
   rownames(ch_matrix)[zero_rows]
 }
 #no all zero histories here either so we didn't have to remove any
+######age class histories######
+path <- "Peregrine ringing data sightings_1989-2024_13042025.xlsx"
+ring_events <- read_excel(path, sheet = "All ringed", skip = 3) %>%
+  rename(
+    ring       = `ring number`,
+    date_event = `date ringed`,
+    age        = `age`              # one-letter codes: n, j, a OR juvenile
+  ) %>%
+  mutate(
+    date_event = as.Date(date_event),
+    cap_year   = if_else(month(date_event) >= 9,
+                         year(date_event),
+                         year(date_event) - 1L),
+    obs        = 1L
+  ) %>%
+  filter(cap_year >= 1997, cap_year <= 2019) %>%
+  select(ring, cap_year, obs, age)
+
+#Process “Re-sightings – annual” sheet -> recaptures
+sight_events <- read_excel(path, sheet = "Re-sightings - annual", skip = 3) %>%
+  rename(
+    ring       = `ring number`,
+    date_event = `date sighted on territory`
+  ) %>%
+  mutate(
+    date_event = as.Date(date_event),
+    cap_year   = if_else(month(date_event) >= 9,
+                         year(date_event),
+                         year(date_event) - 1L),
+    obs        = 1L
+  ) %>%
+  filter(cap_year >= 1997, cap_year <= 2019,
+         ring %in% ring_events$ring) %>%
+  select(ring, cap_year, obs)
+
+#Combine captures & recaptures, remove duplicates
+dat_all <- bind_rows(ring_events, sight_events) %>%
+  distinct(ring, cap_year, obs)
+
+#Expand to full bird × season grid, fill in zeros
+years    <- 1997:2019
+all_combos <- expand.grid(
+  ring     = unique(dat_all$ring),
+  cap_year = years
+)
+
+full <- all_combos %>%
+  left_join(dat_all, by = c("ring","cap_year")) %>%
+  mutate(obs = replace_na(obs, 0L))
+
+#Pivot to wide 0/1 matrix and re-attach age
+enc_hist <- full %>%
+  arrange(ring, cap_year) %>%
+  pivot_wider(
+    names_from   = cap_year,
+    values_from  = obs,
+    names_prefix = "yr",
+    values_fill  = 0L
+  ) %>%
+  left_join(ring_events %>% distinct(ring, age), by = "ring")
+
+# Build inp with 3 age classes
+inp_age3 <- enc_hist %>%
+  mutate(
+    caphist   = apply(select(., starts_with("yr")), 1, paste0, collapse = ""),
+    freq      = 1L,
+    age_group = case_when(
+      age == "n" ~ 1L,       # nestling
+      age %in% c("j", "juvenile") ~ 2L, # juvenile
+      age == "a" ~ 3L,       # adult
+      TRUE        ~ NA_integer_
+    )
+  ) %>%
+  select(caphist, freq, age_group)
+
+#Write .inp with trailing semicolons
+lines <- with(inp_age3, paste0(caphist, " ", freq, " ", age_group, " ;"))
+writeLines(lines, "peregrine_age3class.inp")
+#one row with NA because it was coded as juvenile instead of just a "J", so just checking this below then chnaged the code above
+ring_events %>% 
+  filter(!(age %in% c("n","j","a"))) %>% 
+  distinct(ring, age)
