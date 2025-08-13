@@ -111,7 +111,7 @@ full <- all_combos %>%
   left_join(dat, by = c("ring","cap_year")) %>%
   mutate(obs = replace_na(obs, 0L))
 
-#Pivot into your 0/1 encounter‐history (yr1990 … yr2019)
+#Pivot into your 0/1 encounter‐history
 enc_hist <- full %>%
   arrange(ring, cap_year) %>%
   pivot_wider(
@@ -283,12 +283,20 @@ if (any_zero_histories) {
 }
 #no all zero histories here either so we didn't have to remove any
 ######age class histories######
+#####new age class histories#####
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+
 path <- "Peregrine ringing data sightings_1989-2024_13042025.xlsx"
+
+#Process "All ringed"
 ring_events <- read_excel(path, sheet = "All ringed", skip = 3) %>%
   rename(
     ring       = `ring number`,
     date_event = `date ringed`,
-    age        = `age`              # one-letter codes: n, j, a OR juvenile
+    age        = age              #one-letter codes: n, j, a OR juvenile
   ) %>%
   mutate(
     date_event = as.Date(date_event),
@@ -297,10 +305,12 @@ ring_events <- read_excel(path, sheet = "All ringed", skip = 3) %>%
                          year(date_event) - 1L),
     obs        = 1L
   ) %>%
-  filter(cap_year >= 1997, cap_year <= 2019) %>%
+  #Drop juvenile rows entirely
+  filter(age %in% c("n","a"),
+         cap_year >= 1997, cap_year <= 2019) %>%
   select(ring, cap_year, obs, age)
 
-#Process “Re-sightings – annual” sheet -> recaptures
+#Process "Re-sightings – annual"
 sight_events <- read_excel(path, sheet = "Re-sightings - annual", skip = 3) %>%
   rename(
     ring       = `ring number`,
@@ -317,12 +327,12 @@ sight_events <- read_excel(path, sheet = "Re-sightings - annual", skip = 3) %>%
          ring %in% ring_events$ring) %>%
   select(ring, cap_year, obs)
 
-#Combine captures & recaptures, remove duplicates
+#Combine captures and recaptures
 dat_all <- bind_rows(ring_events, sight_events) %>%
   distinct(ring, cap_year, obs)
 
-#Expand to full bird × season grid, fill in zeros
-years    <- 1997:2019
+#Expand to full bird × season
+years <- 1997:2019
 all_combos <- expand.grid(
   ring     = unique(dat_all$ring),
   cap_year = years
@@ -332,7 +342,7 @@ full <- all_combos %>%
   left_join(dat_all, by = c("ring","cap_year")) %>%
   mutate(obs = replace_na(obs, 0L))
 
-#Pivot to wide 0/1 matrix and re-attach age
+#Pivot to wide & reattach age
 enc_hist <- full %>%
   arrange(ring, cap_year) %>%
   pivot_wider(
@@ -343,24 +353,15 @@ enc_hist <- full %>%
   ) %>%
   left_join(ring_events %>% distinct(ring, age), by = "ring")
 
-# Build inp with 3 age classes
-inp_age3 <- enc_hist %>%
+#Build inp with 2 age class columns (no frequency column)
+inp_age2 <- enc_hist %>%
   mutate(
-    caphist   = apply(select(., starts_with("yr")), 1, paste0, collapse = ""),
-    freq      = 1L,
-    age_group = case_when(
-      age == "n" ~ 1L,       # nestling
-      age %in% c("j", "juvenile") ~ 2L, # juvenile
-      age == "a" ~ 3L,       # adult
-      TRUE        ~ NA_integer_
-    )
+    caphist = apply(select(., starts_with("yr")), 1, paste0, collapse = ""),
+    nestling    = if_else(age == "n", 1L, 0L),
+    adult       = if_else(age == "a", 1L, 0L)
   ) %>%
-  select(caphist, freq, age_group)
+  select(caphist, nestling, adult)
 
-#Write .inp with trailing semicolons
-lines <- with(inp_age3, paste0(caphist, " ", freq, " ", age_group, " ;"))
-writeLines(lines, "peregrine_age3class.inp")
-#one row with NA because it was coded as juvenile instead of just a "J", so just checking this below then chnaged the code above
-ring_events %>% 
-  filter(!(age %in% c("n","j","a"))) %>% 
-  distinct(ring, age)
+#Write to .inp file
+lines <- with(inp_age2, paste0(caphist, " ", nestling, " ", adult, " ;"))
+writeLines(lines, "peregrine_age2class.inp")
