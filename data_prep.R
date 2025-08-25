@@ -1,4 +1,3 @@
-install.packages("lubridate")
 library(lubridate)
 library(readxl)
 library(dplyr)
@@ -282,7 +281,6 @@ if (any_zero_histories) {
   rownames(ch_matrix)[zero_rows]
 }
 #no all zero histories here either so we didn't have to remove any
-######age class histories######
 #####new age class histories#####
 library(readxl)
 library(dplyr)
@@ -365,3 +363,143 @@ inp_age2 <- enc_hist %>%
 #Write to .inp file
 lines <- with(inp_age2, paste0(caphist, " ", nestling, " ", adult, " ;"))
 writeLines(lines, "peregrine_age2class.inp")
+
+#####data exploration#####
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+library(stringr)
+library(forcats)
+
+# Point to your Excel file (put it in your working folder)
+path <- "Peregrine ringing data sightings_1989-2024_13042025.xlsx"
+
+# Season label: **Sep–Aug** year
+season_year <- function(d) { d <- as.Date(d); ifelse(month(d) >= 9, year(d), year(d) - 1L) }
+
+# Create output folder for figures/tables
+if (!dir.exists("figs")) dir.create("figs")
+
+#read & prep: ringed (captures)
+ringed <- read_excel(path, sheet = "All ringed", skip = 3) %>%
+  rename(
+    ring      = `ring number`,
+    date_ring = `date ringed`,
+    age_raw   = age
+  ) %>%
+  mutate(
+    ring      = as.character(ring) |> stringr::str_trim(),
+    date_ring = as.Date(date_ring),
+    cap_year  = season_year(date_ring),
+    age = case_when(
+      stringr::str_to_lower(age_raw) %in% c("n","nestling") ~ "nestling",
+      stringr::str_to_lower(age_raw) %in% c("a","adult")    ~ "adult",
+      stringr::str_to_lower(age_raw) %in% c("j","juvenile") ~ "juvenile",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(cap_year >= 1997, cap_year <= 2019) %>%
+  select(ring, date_ring, cap_year, age)
+
+#read & prep: re-sightings (encounters)
+sight <- read_excel(path, sheet = "Re-sightings - annual", skip = 3) %>%
+  rename(
+    ring      = `ring number`,
+    date_seen = `date sighted on territory`
+  ) %>%
+  mutate(
+    ring     = as.character(ring) |> stringr::str_trim(),
+    date_seen = as.Date(date_seen),
+    sea_year  = season_year(date_seen)
+  ) %>%
+  # only keep re-sightings for birds ringed ≥ 1997
+  filter(ring %in% ringed$ring,
+         sea_year >= 1997, sea_year <= 2019) %>%
+  select(ring, date_seen, sea_year)
+
+
+# 0/1 encounters (distinct per bird-season)
+enc01 <- sight %>% distinct(ring, sea_year) %>% mutate(obs = 1L)
+
+#New birds ringed per season (1997–2019)
+ringed_per_year <- ringed %>%
+  count(cap_year, name = "n_ringed")
+
+readr::write_csv(ringed_per_year, "figs/table_ringed_per_year.csv")
+
+pA <- ggplot(ringed_per_year, aes(cap_year, n_ringed)) +
+  geom_col() +
+  labs(x = "Season (Sep–Aug)", y = "New birds ringed",
+       title = "New peregrines ringed per season (1997–2019)") +
+  theme_minimal(base_size = 12)
+
+ggsave("figs/figA_ringed_per_season.png", pA, width = 7, height = 4.2, dpi = 300)
+
+#total resightings per season
+resightings_per_year <- sight %>%
+  count(sea_year, name = "n_resightings")
+
+readr::write_csv(resightings_per_year, "figs/table_resightings_per_year.csv")
+
+pB <- ggplot(resightings_per_year, aes(sea_year, n_resightings)) +
+  geom_col() +
+  labs(x = "Season (Sep–Aug)", y = "Total re-sightings",
+       title = "Re-sightings per season (1997–2019)") +
+  theme_minimal(base_size = 12)
+
+ggsave("figs/figB_resightings_per_season.png", pB, width = 7, height = 4.2, dpi = 300)
+
+#unique individuals detected per season 
+enc01 <- sight %>%
+  distinct(ring, sea_year) %>%
+  mutate(obs = 1L)
+
+unique_seen_per_year <- enc01 %>%
+  count(sea_year, name = "unique_birds_seen")
+
+readr::write_csv(unique_seen_per_year, "figs/table_unique_birds_per_year.csv")
+
+pC <- ggplot(unique_seen_per_year, aes(sea_year, unique_birds_seen)) +
+  geom_line(linewidth = 1) + geom_point() +
+  labs(x = "Season (Sep–Aug)", y = "Unique birds detected",
+       title = "Unique individuals detected per season") +
+  theme_minimal(base_size = 12)
+
+ggsave("figs/figC_unique_birds_per_season.png", pC, width = 7, height = 4.2, dpi = 300)
+
+#resighting frequency per individual
+freq_per_bird <- enc01 %>%
+  count(ring, name = "n_seasons_seen")
+
+readr::write_csv(freq_per_bird, "figs/table_resightings_per_individual.csv")
+
+pD <- ggplot(freq_per_bird, aes(n_seasons_seen)) +
+  geom_histogram(binwidth = 1, boundary = -0.5, closed = "right") +
+  labs(x = "Number of seasons an individual was seen",
+       y = "Number of individuals",
+       title = "Resighting frequency per bird") +
+  theme_minimal(base_size = 12)
+
+ggsave("figs/figD_hist_resightings_per_bird.png", pD, width = 6.5, height = 4.2, dpi = 300)
+
+#Proportion of nestlings vs adults among birds ringed each season
+age_mix <- ringed %>%
+  count(cap_year, age) %>%
+  mutate(age = dplyr::case_when(
+    age %in% c("nestling","adult") ~ age,
+    TRUE ~ "unknown"
+  ))
+
+readr::write_csv(age_mix, "figs/table_age_mix_ringed.csv")
+
+pE <- ggplot(age_mix, aes(cap_year, n, fill = age)) +
+  geom_col(position = "fill") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Season (Sep–Aug)", y = "Proportion of new birds",
+       fill = "Age at ringing",
+       title = "Proportion nestlings vs adults among birds ringed") +
+  theme_minimal(base_size = 12)
+
+ggsave("figs/figE_age_mix_ringed.png", pE, width = 7, height = 4.2, dpi = 300)
