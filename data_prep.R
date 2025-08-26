@@ -59,7 +59,7 @@ cap_hist_inp <- cap_hist %>%
   select(caphist_str) %>%
   mutate(freq = 1)
 
-# Write to .inp file (no header, space-separated)
+# Write to .inp file (no header, separated by space)
 write.table(
   cap_hist_inp,
   file = "peregrine_data.inp",
@@ -68,6 +68,14 @@ write.table(
   col.names = FALSE,
   sep = " "
 )
+# Create lines with space-separated columns and semicolon at the end
+cap_hist_lines <- apply(cap_hist_inp, 1, function(row) {
+  paste(paste(row, collapse = " "), ";", sep = "")
+})
+
+# Write lines to file
+writeLines(cap_hist_lines, "peregrine_data.inp")
+
 
 
 #####new year code-----------
