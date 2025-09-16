@@ -961,148 +961,14 @@ gg_p <- p_all |>
 gg_phi_all3   # survival with all 3 strata
 gg_p          # detection
 
-#####multi-state#####
-library(readxl)
-library(dplyr)
-library(tidyr)
-library(lubridate)
-
-path <- "Peregrine ringing data sightings_1989-2024_13042025.xlsx"
-years <- 1997:2019
-n_years <- length(years)
-
-# ================
-# 1. All ringed
-# ================
-all_ringed <- read_excel(path, sheet = "All ringed", skip = 3) %>%
-  rename(ring = `ring number`,
-         date_ringed = `date ringed`,
-         age_raw = age) %>%
-  mutate(
-    age_class = case_when(
-      age_raw %in% c("n","N","nestling") ~ "n",
-      age_raw %in% c("j","J","juvenile") ~ "j",
-      age_raw %in% c("a","A","adult")    ~ "a",
-      TRUE ~ NA_character_
-    ),
-    cap_year = if_else(month(date_ringed) >= 9,
-                       year(date_ringed),
-                       year(date_ringed) - 1L)
-  ) %>%
-  filter(cap_year >= min(years), cap_year <= max(years))
-
-# ================
-# 2. Ringed as adults sheet
-# ================
-ringed_adults <- read_excel(path, sheet = "Ringed as adults", skip = 3) %>%
-  rename(ring = `ring number`,
-         date_ringed = `date ringed`) %>%
-  mutate(
-    age_class = "a",
-    cap_year = if_else(month(date_ringed) >= 9,
-                       year(date_ringed),
-                       year(date_ringed) - 1L)
-  ) %>%
-  filter(cap_year >= min(years), cap_year <= max(years))
-
-# Merge into one reference table
-ref_birds <- bind_rows(all_ringed, ringed_adults) %>%
-  distinct(ring, .keep_all = TRUE)
-
-# ================
-# 3. Annual resightings (territory = breeders)
-# ================
-annual <- read_excel(path, sheet = "Re-sightings - annual", skip = 3) %>%
-  rename(ring = `ring number`,
-         date_event = `date sighted on territory`) %>%
-  mutate(
-    cap_year = if_else(month(date_event) >= 9,
-                       year(date_event),
-                       year(date_event) - 1L),
-    state = 2L  # breeder
-  ) %>%
-  filter(cap_year %in% years)
-
-# ================
-# 4. Dispersal sightings (floaters = non-breeders)
-# ================
-dispersal <- read_excel(path, sheet = "Re-sightings - dispersal", skip = 2) %>%
-  rename(ring = `ring number`,
-         date_event = `date of sighting`) %>%
-  mutate(
-    cap_year = if_else(month(date_event) >= 9,
-                       year(date_event),
-                       year(date_event) - 1L),
-    state = 1L  # non-breeder
-  ) %>%
-  filter(cap_year %in% years)
-
-# ================
-# 5. Combine all events
-# ================
-events <- bind_rows(
-  ref_birds %>%
-    transmute(ring, cap_year, state = NA_integer_, age_class),  # marking year
-  annual %>% select(ring, cap_year, state),
-  dispersal %>% select(ring, cap_year, state)
-)
-
-# ================
-# 6. Build full histories
-# ================
-all_combos <- expand.grid(ring = unique(events$ring), year = years)
-
-histories <- all_combos %>%
-  left_join(events, by = c("ring" = "ring", "year" = "cap_year")) %>%
-  group_by(ring, year) %>%
-  summarise(state = max(state, na.rm = TRUE), .groups = "drop") %>%
-  mutate(state = if_else(is.infinite(state), 0L, state))
-
-# Apply rules:
-# - Ringed as adult → breeders from marking year onward
-# - Ringed as nestling/juvenile → non-breeders (1) until first breeder sighting
-# - Default = 0 (not seen)
-
-histories <- histories %>%
-  left_join(ref_birds %>% select(ring, age_class, cap_year), by = "ring") %>%
-  group_by(ring) %>%
-  arrange(year) %>%
-  mutate(
-    state = case_when(
-      # Adults: breeders immediately
-      age_class == "a" & year >= cap_year ~ 2L,
-      # Nestlings/juveniles: state 1 until first 2 seen
-      age_class %in% c("n","j") & year == cap_year ~ 1L,
-      TRUE ~ state
-    ),
-    # Once recruited (2), remain 2 forever
-    state = if_else(cummax(state == 2) > 0, 2L, state)
-  ) %>%
-  ungroup()
-
-# ================
-# 7. Collapse to encounter histories
-# ================
-enc_hist <- histories %>%
-  group_by(ring) %>%
-  summarise(history = paste0(state, collapse = ""), .groups = "drop")
-
-# ================
-# 8. Write to .inp
-# ================
-lines <- paste0(enc_hist$history, " 1 ;")
-writeLines(lines, "peregrine_multistate.inp")
-
-
 ##### Final multistate encounter histories for MARK #####
 library(readxl)
 library(dplyr)
 library(tidyr)
 library(lubridate)
 
-# =============================
 # 1. Load the Excel sheets
-# =============================
+
 path <- "Peregrine ringing data sightings_1989-2024_13042025.xlsx"
 
 all_ringed <- read_excel(path, sheet = "All ringed", skip = 3) %>%
@@ -1149,9 +1015,9 @@ dispersal <- read_excel(path, sheet = "Re-sightings - dispersal", skip = 2) %>%
          ringed_as == "n",          # only birds ringed as nestlings
          loc_rel != "outside")      # exclude outside sightings
 
-# =============================
+
 # 2. Assign states
-# =============================
+
 # State coding: 0 = not seen, 1 = non-breeder, 2 = breeder
 
 # Initial capture (ringing)
@@ -1175,9 +1041,9 @@ dispersal_events <- dispersal %>%
   mutate(state = 1) %>%
   select(ring, year, state)
 
-# =============================
+
 # 3. Combine all events
-# =============================
+
 events <- bind_rows(ring_events, annual_events, dispersal_events) %>%
   distinct(ring, year, .keep_all = TRUE)
 
@@ -1188,9 +1054,10 @@ full <- all_combos %>%
   left_join(events, by = c("ring","year")) %>%
   mutate(state = replace_na(state, 0))
 
-# =============================
+
+
 # 4. Build encounter histories
-# =============================
+
 enc_hist <- full %>%
   arrange(ring, year) %>%
   tidyr::spread(key = year, value = state, fill = 0)
@@ -1203,8 +1070,10 @@ inp <- enc_hist %>%
   ) %>%
   pull(line)
 
-# =============================
+
 # 5. Write to .inp file
-# =============================
+
 writeLines(inp, "peregrine_multistate_final.inp")
+
+
 
