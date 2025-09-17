@@ -1019,17 +1019,22 @@ dispersal <- read_excel(path, sheet = "Re-sightings - dispersal", skip = 2) %>%
 # 2. Assign states
 
 # State coding: 0 = not seen, 1 = non-breeder, 2 = breeder
-
-# Initial capture (ringing)
+# Initial capture (ringing) 
 ring_events <- all_ringed %>%
+  # Exclude juveniles entirely
+  filter(!age %in% c("j","juvenile")) %>%
   mutate(
     state = case_when(
-      age %in% c("n","j","juvenile") ~ 1,
-      age %in% c("a","adult") ~ 2,
+      age %in% c("n") ~ 1,   # nestlings = non-breeders
+      age %in% c("a","adult") ~ 2,  # adults = breeders
       TRUE ~ NA_real_
     )
   ) %>%
   select(ring, year, state)
+#check juvenile filtered out
+table(ring_events$state, useNA = "ifany")
+table(all_ringed$age, useNA = "ifany")        # still shows original, unfiltered
+table(ring_events$state, useNA = "ifany")     # now only 1 (n) and 2 (a)
 
 # Annual (territory sightings → breeders)
 annual_events <- annual %>%
