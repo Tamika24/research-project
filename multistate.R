@@ -132,8 +132,8 @@ ddl$Psi$fix[ddl$Psi$stratum=="2" & ddl$Psi$tostratum=="1"] <- 0
 
 # Create age classes for NB→B transitions
 ddl$Psi$ageclass <- cut(ddl$Psi$Age,
-                        breaks = c(0,2,3,4,6,100),
-                        labels = c("1","2","3","4","5"),
+                        breaks = c(0,2,3,4,100),
+                        labels = c("1","2","3","4"),
                         right = FALSE)
 
 # Model
