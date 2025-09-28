@@ -160,7 +160,7 @@ ddl$S$ageclass2 <- cut(ddl$S$Age,
                        labels = c("young","older"),
                        right = FALSE)
 
-# NB→B transitions: 5 age classes
+# NB→B transitions: 4 age classes
 ddl$Psi$ageclass <- cut(ddl$Psi$Age,
                         breaks = c(0,2,3,4,100),
                         labels = c("1","2","3","4"),
