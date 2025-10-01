@@ -176,3 +176,4 @@ model.ageNB <- list(
 
 fit.ageNB <- mark(ms.processed, ddl, model.parameters = model.ageNB)
 fit.ageNB$results$AICc
+
