@@ -372,6 +372,25 @@ inp_age2 <- enc_hist %>%
 lines <- with(inp_age2, paste0(caphist, " ", nestling, " ", adult, " ;"))
 writeLines(lines, "peregrine_age2class.inp")
 
+# fixing input file for marked as young vs adult
+library(dplyr)
+library(tidyr)
+
+inp_age2 <- enc_hist %>%
+  mutate(
+    caphist = apply(select(., starts_with("yr")), 1, paste0, collapse = ""),
+    age_group = case_when(
+      age == "n" ~ "nestling",
+      age == "a" ~ "adult"
+    )
+  ) %>%
+  count(caphist, age_group) %>%
+  pivot_wider(names_from = age_group, values_from = n, values_fill = 0) %>%
+  arrange(caphist)
+
+lines <- with(inp_age2, paste0(caphist, " ", nestling, " ", adult, " ;"))
+writeLines(lines, "peregrine_ya.inp")
+
 #####data exploration#####
 library(readxl)
 library(dplyr)
