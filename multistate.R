@@ -157,7 +157,7 @@ ddl$S$ageclass2 <- cut(ddl$S$Age,
                        labels = c("young","older"),
                        right = FALSE)
 
-# NB→B transitions: 5 age classes
+# NB→B transitions: 4 age classes
 ddl$Psi$ageclass <- cut(ddl$Psi$Age,
                         breaks = c(0,2,3,4,100),
                         labels = c("1","2","3","4"),
@@ -172,6 +172,7 @@ model.ageNB <- list(
 )
 
 fit.ageNB <- mark(ms.processed, ddl, model.parameters = model.ageNB)
+<<<<<<< HEAD
 
 # ---- 8. View results
 summary(fit.ageNB)
@@ -225,4 +226,7 @@ all.models <- collect.models()
 aic.table <- all.models$model.table
 
 write_xlsx(aic.table, "AICc_results.xlsx")
+=======
+fit.ageNB$results$AICc
+>>>>>>> 8d5f947e67791c50dbcd4910ae139e3ba4c1ada6
 
