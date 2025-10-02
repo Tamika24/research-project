@@ -226,7 +226,6 @@ all.models <- collect.models()
 aic.table <- all.models$model.table
 
 write_xlsx(aic.table, "AICc_results.xlsx")
-=======
-fit.ageNB$results$AICc
->>>>>>> 8d5f947e67791c50dbcd4910ae139e3ba4c1ada6
+
+
 
