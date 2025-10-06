@@ -229,3 +229,83 @@ write_xlsx(aic.table, "AICc_results.xlsx")
 
 
 
+
+#####new check for code#####
+library(RMark)
+library(writexl)
+
+# 1. Read and process data
+
+data <- convert.inp("peregrine_multistate_final.inp", group.df = NULL)
+
+ms.processed <- process.data(data,
+                             model = "Multistrata",
+                             strata.labels = c("1", "2"))   # 1=Nonbreeder, 2=Breeder
+
+ddl <- make.design.data(ms.processed)
+
+# 2. Biological constraint: fix B→NB to 0
+
+ddl$Psi$fix[ddl$Psi$stratum == "2" & ddl$Psi$tostratum == "1"] <- 0
+
+
+# 3. Define age bins
+
+# NB survival: 2 broad age classes (young vs older)
+ddl$S$ageclass2 <- cut(ddl$S$Age,
+                       breaks = c(0, 2, 100),
+                       labels = c("young", "older"),
+                       right = FALSE)
+
+# Make sure it's treated as a factor
+ddl$S$ageclass2 <- factor(ddl$S$ageclass2, levels = c("young", "older"))
+
+# NB→B transitions: 4 age classes (1yr, 2yr, 3yr, 4+)
+ddl$Psi$ageclass4 <- cut(ddl$Psi$Age,
+                         breaks = c(0, 2, 3, 4, 100),
+                         labels = c("1yr", "2yr", "3yr", "4+"),
+                         right = FALSE)
+
+ddl$Psi$ageclass4 <- factor(ddl$Psi$ageclass4,
+                            levels = c("1yr", "2yr", "3yr", "4+"))
+
+# Optional sanity check
+print(table(ddl$Psi$ageclass4, ddl$Psi$Age))
+
+# 4. Define model
+
+model.ageNB2 <- list(
+  # Survival:
+  # - NB (state 1): age + time
+  # - B (state 2): time only
+  S = list(formula = ~ I(stratum == "1") * (ageclass2 + time) +
+             I(stratum == "2") * time),
+  
+  # Detection: differs by state & time
+  p = list(formula = ~ stratum + time),
+  
+  # Transition (NB→B): age-dependent (4 bins)
+  Psi = list(formula = ~ ageclass4)
+)
+
+# 5. Fit model
+
+fit.ageNB2 <- mark(ms.processed, ddl, model.parameters = model.ageNB2)
+
+
+# 6. View and save results
+
+summary(fit.ageNB2)
+
+# Extract real parameter estimates
+real_estimatesNB2 <- fit.ageNB2$results$real
+real_estimatesNB2 <- data.frame(Parameter = rownames(real_estimatesNB2),
+                                real_estimatesNB2)
+
+# Save to Excel
+write_xlsx(real_estimatesNB2, "real_estimatesNB2.xlsx")
+
+
+# 7. Optional diagnostics
+# View betas – look for aliasing or large SEs
+fit.ageNB2$results$beta
