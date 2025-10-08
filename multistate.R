@@ -99,26 +99,6 @@ real_estimates3 <- data.frame(Parameter=rownames(real_estimates3), real_estimate
 library(writexl)
 write_xlsx(real_estimates3, "real_estimates3.xlsx")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #####survival for NB: age effect, B: only time####
 library(RMark)
 
@@ -216,7 +196,7 @@ library(writexl)
 write_xlsx(real_estimatesNB2, "real_estimatesNB2.xlsx")
 
 
-#####AICs for the original 6 models#####
+#####AICs for the above 6 models#####
 all.models <- collect.models()
 aic.table <- all.models$model.table
 
@@ -224,4 +204,53 @@ write_xlsx(aic.table, "AICc_results.xlsx")
 
 
 
+
+
+
+##### NB2 but recapture has no time effect #####
+library(RMark)
+
+data <- convert.inp("peregrine_multistate_final.inp", group.df = NULL)
+ms.processed <- process.data(data, model = "Multistrata", strata.labels = c("1","2"))
+ddl <- make.design.data(ms.processed)
+
+# Fix breeder → nonbreeder to 0
+ddl$Psi$fix[ddl$Psi$stratum=="2" & ddl$Psi$tostratum=="1"] <- 0
+
+# NB survival: 2 age classes
+# Step 1: Create ageclass2 as a character
+ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
+                                    breaks = c(0,1,100),
+                                    labels = c("young","older"),
+                                    right = FALSE))
+
+# Step 2: Assign "none" to breeders
+ddl$S$ageclass2[ddl$S$stratum == "2"] <- "none"
+
+# Step 3: Convert back to factor with all three levels
+ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
+                          levels = c("young","older","none"))
+
+
+# NB→B transitions: 4 age classes
+ddl$Psi$ageclass <- cut(ddl$Psi$Age,
+                        breaks = c(0,1,2,3,100),
+                        labels = c("1","2","3","4"),
+                        right = FALSE)
+
+
+# Model: NB survival depends on ageclass2, B survival varies by time
+model.ageNB3 <- list(
+  S   = list(formula = ~stratum*time + I(stratum=="1")*(ageclass2)),
+  p   = list(formula = ~stratum),
+  Psi = list(formula = ~ageclass)
+)
+
+fit.ageNB3 <- mark(ms.processed, ddl, model.parameters = model.ageNB3)
+
+# save results
+real_estimatesNB3 = fit.ageNB3$results$real
+real_estimatesNB3 <- data.frame(Parameter=rownames(real_estimatesNB3), real_estimatesNB3)
+library(writexl)
+write_xlsx(real_estimatesNB3, "real_estimatesNB3.xlsx")
 
