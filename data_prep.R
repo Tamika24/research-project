@@ -4,7 +4,7 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
-#####------------------------
+#####original#####
 raw <- read_excel(
   "Peregrine ringing data sightings_1989-2024_13042025.xlsx",
   sheet = "Re-sightings - annual",
@@ -700,9 +700,6 @@ phi_plot <- bind_rows(phi_juv, phi_adult, phi_firstyear)
 
 
 # Detection p(t/t) by marking group
-#66..87 : p (MY)
-#8..109: p (MA)
-
 p <- filter(dat, par == "p")
 
 p_my <- p |>
@@ -981,12 +978,7 @@ gg_phi_all3   # survival with all 3 strata
 gg_p          # detection
 
 ##### Final multistate encounter histories for MARK #####
-library(readxl)
-library(dplyr)
-library(tidyr)
-library(lubridate)
-
-# 1. Load the Excel sheets
+#Load the Excel sheets
 
 path <- "Peregrine ringing data sightings_1989-2024_13042025.xlsx"
 
@@ -1035,8 +1027,7 @@ dispersal <- read_excel(path, sheet = "Re-sightings - dispersal", skip = 2) %>%
          loc_rel != "outside")      # exclude outside sightings
 
 
-# 2. Assign states
-
+#Assign states
 # State coding: 0 = not seen, 1 = non-breeder, 2 = breeder
 # Initial capture (ringing) 
 ring_events <- all_ringed %>%
@@ -1066,7 +1057,7 @@ dispersal_events <- dispersal %>%
   select(ring, year, state)
 
 
-# 3. Combine all events
+#Combine all events
 
 events <- bind_rows(ring_events, annual_events, dispersal_events) %>%
   distinct(ring, year, .keep_all = TRUE)
@@ -1080,7 +1071,7 @@ full <- all_combos %>%
 
 
 
-# 4. Build encounter histories
+#Build encounter histories
 
 enc_hist <- full %>%
   arrange(ring, year) %>%
@@ -1095,7 +1086,7 @@ inp <- enc_hist %>%
   pull(line)
 
 
-# 5. Write to .inp file
+# Write to .inp file
 
 writeLines(inp, "peregrine_multistate_final.inp")
 
