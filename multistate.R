@@ -324,7 +324,7 @@ ddl$Psi$ageclass <- cut(ddl$Psi$Age,
 # Model: NB survival depends on ageclass2, B survival varies by time
 #check standard errors of this !!!!!!!
 model.ageNB5 <- list(
-  S   = list(formula = ~I(stratum=="1")*time + I(stratum=="2")*time),
+  S   = list(formula = ~stratum*time),
   p   = list(formula = ~stratum + time),
   Psi = list(formula = ~ageclass)
 )
