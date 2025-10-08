@@ -99,6 +99,26 @@ real_estimates3 <- data.frame(Parameter=rownames(real_estimates3), real_estimate
 library(writexl)
 write_xlsx(real_estimates3, "real_estimates3.xlsx")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #####survival for NB: age effect, B: only time####
 library(RMark)
 
@@ -112,7 +132,7 @@ ddl$Psi$fix[ddl$Psi$stratum=="2" & ddl$Psi$tostratum=="1"] <- 0
 # NB survival: 2 age classes
 # Step 1: Create ageclass2 as a character
 ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
-                                    breaks = c(0,2,100),
+                                    breaks = c(0,1,100),
                                     labels = c("young","older"),
                                     right = FALSE))
 
@@ -125,7 +145,7 @@ ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
 
 # NB→B transitions: 4 age classes
 ddl$Psi$ageclass <- cut(ddl$Psi$Age,
-                        breaks = c(0,2,3,4,100),
+                        breaks = c(0,1,2,3,100),
                         labels = c("1","2","3","4"),
                         right = FALSE)
 
@@ -161,7 +181,7 @@ ddl$Psi$fix[ddl$Psi$stratum=="2" & ddl$Psi$tostratum=="1"] <- 0
 # NB survival: 2 age classes
 # Step 1: Create ageclass2 as a character
 ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
-                                    breaks = c(0,2,100),
+                                    breaks = c(0,1,100),
                                     labels = c("young","older"),
                                     right = FALSE))
 
@@ -175,14 +195,14 @@ ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
 
 # NB→B transitions: 4 age classes
 ddl$Psi$ageclass <- cut(ddl$Psi$Age,
-                        breaks = c(0,2,3,4,100),
+                        breaks = c(0,1,2,3,100),
                         labels = c("1","2","3","4"),
                         right = FALSE)
 
 
 # Model: NB survival depends on ageclass2, B survival varies by time
 model.ageNB2 <- list(
-  S   = list(formula = ~I(stratum=="1")*(ageclass2 + time) + I(stratum=="2")*time),
+  S   = list(formula = ~stratum*time + I(stratum=="1")*(ageclass2)),
   p   = list(formula = ~stratum + time),
   Psi = list(formula = ~ageclass)
 )
@@ -195,7 +215,8 @@ real_estimatesNB2 <- data.frame(Parameter=rownames(real_estimatesNB2), real_esti
 library(writexl)
 write_xlsx(real_estimatesNB2, "real_estimatesNB2.xlsx")
 
-#####AICs for the above 6 models#####
+
+#####AICs for the original 6 models#####
 all.models <- collect.models()
 aic.table <- all.models$model.table
 
