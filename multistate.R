@@ -1,27 +1,27 @@
 ###### fully time dependent model, no age structure####
 library(RMark)
 
-# 1. Load data (from .inp file or dataframe)
+#Load data (from .inp file or dataframe)
 data <- convert.inp("peregrine_multistate_final.inp", group.df = NULL)
 
-# 2. Process multistate data (strata = states)
+#Process multistate data (strata = states)
 proc <- process.data(data, model = "Multistrata", 
                      strata.labels = c("1", "2"))  # 1 = nonbreeder, 2 = breeder
 
-# 3. Generate default design data
+#Generate default design data
 ddl <- make.design.data(proc)
 
-# 4. Constrain transitions from breeder (state "2") to nonbreeder (state "1") to zero
+#Constrain transitions from breeder (state "2") to nonbreeder (state "1") to zero
 ddl$Psi$fix <- with(ddl$Psi, ifelse(stratum == "2" & tostratum == "1", 0, NA))
 
-# 5. Define the model with time-dependent parameters
+#Define the model with time-dependent parameters
 model.list <- list(
   S = list(formula = ~stratum * time),
   p = list(formula = ~stratum * time),
   Psi = list(formula = ~ time)
 )
 
-# 6. Fit the model
+#Fit the model
 fit.constrained <- mark(
   data = proc,
   ddl = ddl,
@@ -29,7 +29,7 @@ fit.constrained <- mark(
   output = FALSE
 )
 
-# 7. View model results
+#View model results
 summary(fit.constrained)
 
 # save results
@@ -168,16 +168,16 @@ ddl <- make.design.data(ms.processed)
 ddl$Psi$fix[ddl$Psi$stratum=="2" & ddl$Psi$tostratum=="1"] <- 0
 
 # NB survival: 2 age classes
-# Step 1: Create ageclass2 as a character
+#Create ageclass2 as a character
 ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
                                     breaks = c(0,1,100),
                                     labels = c("young","older"),
                                     right = FALSE))
 
-# Step 2: Assign "none" to breeders
+#Assign "none" to breeders
 ddl$S$ageclass2[ddl$S$stratum == "2"] <- "none"
 
-# Step 3: Convert back to factor with all three levels
+#Convert back to factor with all three levels
 ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
                           levels = c("young","older","none"))
 
@@ -197,7 +197,7 @@ model.ageNB4 <- list(
 
 fit.ageNB4 <- mark(ms.processed, ddl, model.parameters = model.ageNB4)
 
-# ---- 8. View results
+#View results
 summary(fit.ageNB4)
 
 # save results
@@ -223,10 +223,10 @@ ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
                                     labels = c("young","older"),
                                     right = FALSE))
 
-# Step 2: Assign "none" to breeders
+#Assign "none" to breeders
 ddl$S$ageclass2[ddl$S$stratum == "2"] <- "none"
 
-# Step 3: Convert back to factor with all three levels
+#Convert back to factor with all three levels
 ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
                           levels = c("young","older","none"))
 
@@ -246,7 +246,7 @@ model.ageNB <- list(
 
 fit.ageNB <- mark(ms.processed, ddl, model.parameters = model.ageNB)
 
-# ---- 8. View results
+#View results
 summary(fit.ageNB)
 
 # save results
@@ -272,10 +272,10 @@ ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
                                     labels = c("young","older"),
                                     right = FALSE))
 
-# Step 2: Assign "none" to breeders
+#Assign "none" to breeders
 ddl$S$ageclass2[ddl$S$stratum == "2"] <- "none"
 
-# Step 3: Convert back to factor with all three levels
+#Convert back to factor with all three levels
 ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
                           levels = c("young","older","none"))
 
@@ -322,7 +322,6 @@ ddl$Psi$ageclass <- cut(ddl$Psi$Age,
 
 
 # Model: NB survival depends on ageclass2, B survival varies by time
-#check standard errors of this !!!!!!!
 model.ageNB5 <- list(
   S   = list(formula = ~stratum*time),
   p   = list(formula = ~stratum + time),
@@ -354,10 +353,10 @@ ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
                                     labels = c("young","older"),
                                     right = FALSE))
 
-# Step 2: Assign "none" to breeders
+#Assign "none" to breeders
 ddl$S$ageclass2[ddl$S$stratum == "2"] <- "none"
 
-# Step 3: Convert back to factor with all three levels
+#Convert back to factor with all three levels
 ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
                           levels = c("young","older","none"))
 
@@ -385,9 +384,6 @@ library(writexl)
 write_xlsx(real_estimatesNB3, "real_estimatesNB3.xlsx")
 
 
-
-
-
 #####NB2 with age*time CHECK SE!!!!!!######
 library(RMark)
 
@@ -405,10 +401,10 @@ ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
                                     labels = c("young","older"),
                                     right = FALSE))
 
-# Step 2: Assign "none" to breeders
+#Assign "none" to breeders
 ddl$S$ageclass2[ddl$S$stratum == "2"] <- "none"
 
-# Step 3: Convert back to factor with all three levels
+#Convert back to factor with all three levels
 ddl$S$ageclass2 <- factor(ddl$S$ageclass2,
                           levels = c("young","older","none"))
 
@@ -421,7 +417,6 @@ ddl$Psi$ageclass <- cut(ddl$Psi$Age,
 
 
 # Model: NB survival depends on ageclass2, B survival varies by time
-# CHECK STANDARD ERRORS!!!!!!! 
 model.ageNB6 <- list(
   S   = list(formula = ~I(stratum=="1")*(ageclass2 * time) + I(stratum=="2")*time),
   p   = list(formula = ~stratum + time),
