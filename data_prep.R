@@ -1,9 +1,3 @@
-library(lubridate)
-library(readxl)
-library(dplyr)
-library(tidyr)
-library(stringr)
-
 #####original#####
 raw <- read_excel(
   "Peregrine ringing data sightings_1989-2024_13042025.xlsx",
@@ -530,6 +524,28 @@ pE <- ggplot(age_mix, aes(cap_year, n, fill = age)) +
   theme_minimal(base_size = 12)
 
 ggsave("figs/figE_age_mix_ringed.png", pE, width = 7, height = 4.2, dpi = 300)
+
+#bar chart instead of histogram 
+# --- Resighting frequency per individual ---
+freq_per_bird <- enc01 %>%
+  count(ring, name = "n_seasons_seen")
+
+# --- Plot using bar chart ---
+pD <- ggplot(freq_per_bird, aes(x = factor(n_seasons_seen))) +
+  geom_bar(fill = "#0072B2", colour = "black", width = 0.8) +
+  labs(
+    x = "Number of seasons an individual was seen",
+    y = "Number of individuals",
+    title = "Resighting Frequency per Bird"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+  )
+
+# Save the figure
+ggsave("figs/figD_bar_resightings_per_bird.png", pD, width = 6.5, height = 4.2, dpi = 300)
 
 #####graphs#####
 library(readr)
