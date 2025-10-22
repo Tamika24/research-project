@@ -71,7 +71,7 @@ export.MARK(ms.processed, "test2", fit.const, replace=T)
 
 
 
-#####stratum,stratum,age CHECK SE!!!!!1#####
+#####stratum,stratum,age#####
 library(RMark)
 
 data <- convert.inp("peregrine_multistate_final.inp", group.df = NULL)
@@ -227,7 +227,7 @@ ddl <- make.design.data(ms.processed)
 ddl$Psi$fix[ddl$Psi$stratum=="2" & ddl$Psi$tostratum=="1"] <- 0
 
 # NB survival: 2 age classes
-# Step 1: Create ageclass2 as a character
+# Create ageclass2 as a character
 ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
                                     breaks = c(0,1,100),
                                     labels = c("young","older"),
@@ -265,7 +265,7 @@ write_xlsx(real_estimatesNB2, "real_estimatesNB2.xlsx")
 
 export.MARK(ms.processed, "test7", fit.ageNB2, replace=T)
 
-#####survival only varies by time CHECK SE!!!!!! #####
+#####survival only varies by time #####
 library(RMark)
 
 data <- convert.inp("peregrine_multistate_final.inp", group.df = NULL)
@@ -349,7 +349,7 @@ write_xlsx(real_estimatesNB3, "real_estimatesNB3.xlsx")
 export.MARK(ms.processed, "test9", fit.ageNB3,replace=T)
 
 
-#####NB2 with age*time CHECK SE!!!!!!######
+#####NB2 with age*time######
 library(RMark)
 
 data <- convert.inp("peregrine_multistate_final.inp", group.df = NULL)
@@ -360,7 +360,7 @@ ddl <- make.design.data(ms.processed)
 ddl$Psi$fix[ddl$Psi$stratum=="2" & ddl$Psi$tostratum=="1"] <- 0
 
 # NB survival: 2 age classes
-# Step 1: Create ageclass2 as a character
+# Create ageclass2 as a character
 ddl$S$ageclass2 <- as.character(cut(ddl$S$Age,
                                     breaks = c(0,1,100),
                                     labels = c("young","older"),

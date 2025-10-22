@@ -394,10 +394,9 @@ library(ggplot2)
 library(stringr)
 library(forcats)
 
-# Point to your Excel file (put it in your working folder)
 path <- "Peregrine ringing data sightings_1989-2024_13042025.xlsx"
 
-# Season label: **Sep–Aug** year
+# Season label: Sep–Aug year
 season_year <- function(d) { d <- as.Date(d); ifelse(month(d) >= 9, year(d), year(d) - 1L) }
 
 # Create output folder for figures/tables
@@ -526,11 +525,11 @@ pE <- ggplot(age_mix, aes(cap_year, n, fill = age)) +
 ggsave("figs/figE_age_mix_ringed.png", pE, width = 7, height = 4.2, dpi = 300)
 
 #bar chart instead of histogram 
-# --- Resighting frequency per individual ---
+#Resighting frequency per individual
 freq_per_bird <- enc01 %>%
   count(ring, name = "n_seasons_seen")
 
-# --- Plot using bar chart ---
+# Plot using bar chart
 pD <- ggplot(freq_per_bird, aes(x = factor(n_seasons_seen))) +
   geom_bar(fill = "#0072B2", colour = "black", width = 0.8) +
   labs(
@@ -705,7 +704,7 @@ phi_adult <- phi |>
          year     = year_lab,
          strata   = "Adult (Age 3+)")
 
-# If you also want to keep the first-year curve, uncomment below:
+
 phi_firstyear <- phi |>
    filter(idx %in% 1:22) |>
    mutate(interval = interval,
@@ -901,7 +900,7 @@ n_int <- 22                       # 23 occasions → 22 intervals
 interval <- 1:n_int
 year_lab <- 1997 + (interval - 1) # adjust if first season differs
 
-#Split Φ blocks 
+#Split phi blocks 
 phi <- filter(dat, par == "Phi")
 
 phi_first <- phi |> filter(idx %in% 1:22) |>
@@ -1107,4 +1106,58 @@ inp <- enc_hist %>%
 writeLines(inp, "peregrine_multistate_final.inp")
 
 
+
+
+######population plot#####
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+pop <- read_excel("Peregrine ringing data sightings_1989-2024_13042025.xlsx", 
+                  sheet = "Population", skip = 5)
+
+# Clean columns (use the exact names from your import)
+pop <- pop %>%
+  rename(
+    Year = `year...1`,
+    Pairs_all = `n breeding pairs...3`,
+    Pairs_urban = `n breeding pairs...7`
+  ) %>%
+  select(Year, Pairs_all, Pairs_urban) %>%
+  filter(!is.na(Year)) %>%
+  mutate(
+    Year = as.character(Year),
+    Year = gsub("\\*", "", Year),       # remove asterisks
+    Year = suppressWarnings(as.numeric(Year))
+  ) %>%
+  filter(!is.na(Year)) %>%
+  mutate(
+    Pairs_urban = ifelse(is.na(Pairs_urban), 0, Pairs_urban),
+    Pairs_mountain = Pairs_all - Pairs_urban
+  )
+
+#Plot 
+ggplot(pop, aes(x = Year)) +
+  geom_line(aes(y = Pairs_all, colour = "All areas"), size = 1.1) +
+  geom_point(aes(y = Pairs_all, colour = "All areas"), size = 2) +
+  geom_line(aes(y = Pairs_urban, colour = "Urban areas"), size = 1.1) +
+  geom_point(aes(y = Pairs_urban, colour = "Urban areas"), size = 2, shape = 17) +
+  geom_line(aes(y = Pairs_mountain, colour = "Mountain areas"), size = 1.1) +
+  geom_point(aes(y = Pairs_mountain, colour = "Mountain areas"), size = 2, shape = 15) +
+  scale_colour_manual(values = c(
+    "All areas" = "#0072B2", 
+    "Urban areas" = "#E69F00", 
+    "Mountain areas" = "#009E73"
+  )) +
+  labs(
+    x = "Year",
+    y = "Number of Breeding Pairs",
+    colour = "Population Subset",
+    title = "Peregrine Falcon Breeding Pairs in the Cape Peninsula (1989–2019)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    panel.grid.minor = element_blank()
+  )
 
